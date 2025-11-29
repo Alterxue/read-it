@@ -93,7 +93,7 @@ app.post('/api/save', async (req, res) => {
         // Use puppeteer with stealth to bypass Cloudflare protection
         console.log(`Fetching: ${url}`);
         browser = await puppeteer.launch({ 
-            headless: false, // Use visible browser to bypass detection
+            headless: 'new', // Run in background without popup
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
@@ -133,6 +133,72 @@ app.post('/api/save', async (req, res) => {
         // Extra wait for page to fully load
         await new Promise(r => setTimeout(r, 2000));
         
+        // Find next chapter link before getting content
+        const nextChapterUrl = await page.evaluate(() => {
+            // Chinese patterns for next chapter
+            const chinesePatterns = ['下一章', '下一页', '下章', '下页', '下一节', '继续阅读', '下一篇'];
+            // English patterns
+            const englishPatterns = ['next chapter', 'next page', 'next'];
+            
+            const links = Array.from(document.querySelectorAll('a'));
+            
+            // First try: exact Chinese text match
+            for (const link of links) {
+                const text = link.textContent?.trim() || '';
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript:')) continue;
+                
+                for (const pattern of chinesePatterns) {
+                    if (text.includes(pattern)) {
+                        try {
+                            return new URL(href, window.location.href).href;
+                        } catch (e) {
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            // Second try: English text match
+            for (const link of links) {
+                const text = link.textContent?.trim().toLowerCase() || '';
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript:')) continue;
+                
+                for (const pattern of englishPatterns) {
+                    if (text.includes(pattern)) {
+                        try {
+                            return new URL(href, window.location.href).href;
+                        } catch (e) {
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            // Third try: common CSS selectors
+            const selectors = [
+                'a.next', 'a#next', '.next a', '#next a',
+                'a[rel="next"]', 'a.nextchapter', 'a.next-chapter',
+                '.chapter-nav a:last-child', '.pagination a:last-child'
+            ];
+            
+            for (const sel of selectors) {
+                try {
+                    const el = document.querySelector(sel);
+                    if (el && el.href) {
+                        return el.href;
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+            
+            return null;
+        });
+        
+        console.log(`Next chapter URL: ${nextChapterUrl || 'not found'}`);
+        
         const html = await page.content();
         await browser.close();
         browser = null;
@@ -165,10 +231,11 @@ app.post('/api/save', async (req, res) => {
                     excerpt: body.textContent?.substring(0, 200).trim() || '',
                     site_name: new URL(url).hostname,
                     original_url: url,
+                    next_chapter_url: nextChapterUrl,
                     created_at: new Date().toISOString()
                 };
                 articles.push(article);
-                saveArticles(); // Save to file
+                saveArticles();
                 console.log(`✅ Article saved (fallback): ${article.title}`);
                 return res.json({ message: 'Article saved successfully', data: article });
             }
@@ -185,11 +252,12 @@ app.post('/api/save', async (req, res) => {
             excerpt: parsed.excerpt,
             site_name: parsed.siteName || new URL(url).hostname,
             original_url: url,
+            next_chapter_url: nextChapterUrl,
             created_at: new Date().toISOString()
         };
 
         articles.push(article);
-        saveArticles(); // Save to file
+        saveArticles();
 
         console.log(`✅ Article saved: ${article.title}`);
         res.json({ message: 'Article saved successfully', data: article });

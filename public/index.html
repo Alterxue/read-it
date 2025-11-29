@@ -1,122 +1,102 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>my clean reader</title>
+    <title>My Clean Reader</title>
     <style>
-        body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            background-color: #f4f4f4;
-            color: #333;
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
+            padding: 40px 20px;
         }
 
         h1 {
             text-align: center;
-            color: #2c3e50;
             margin-bottom: 30px;
+            font-size: 2.5em;
         }
 
-        /* enter */
         .input-group {
             display: flex;
             gap: 10px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
 
-        input[type="text"] {
-            flex-grow: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+        #url-input {
+            flex: 1;
+            padding: 15px 20px;
             font-size: 16px;
-            outline: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #3498db;
-        }
-
-        button#save-btn {
-            padding: 12px 24px;
-            background-color: #2ecc71;
-            color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
+            background: #16213e;
+            color: #eee;
+        }
+
+        #url-input::placeholder {
+            color: #666;
+        }
+
+        #save-btn {
+            padding: 15px 30px;
             font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e94560, #c23a51);
+            color: white;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            transition: all 0.3s;
         }
 
-        button#save-btn:hover {
-            background-color: #27ae60;
+        #save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
         }
 
-        button#save-btn:disabled {
-            background-color: #95a5a6;
+        #save-btn:disabled {
+            background: #555;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
-        /*articles*/
         .article-list {
             list-style: none;
-            padding: 0;
         }
 
         .article-card {
-            background: white;
-            margin-bottom: 15px;
+            background: #16213e;
+            border-radius: 10px;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border-left: 5px solid transparent;
+            transition: all 0.3s;
+            border-left: 4px solid #e94560;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .article-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-left-color: #3498db;
+            transform: translateX(10px);
+            background: #1a2744;
         }
 
-        .article-card {
-            position: relative;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .article-card:hover .delete-btn {
-            opacity: 1;
-        }
-
-        .delete-btn:hover {
-            background: #c0392b;
+        .article-info {
+            flex: 1;
         }
 
         .article-title {
@@ -131,7 +111,33 @@
             color: #7f8c8d;
         }
 
-        /* reading mode*/
+        .delete-btn {
+            padding: 8px 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .article-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        /* Reader modal - Beautiful dark theme */
         #reader-modal {
             display: none;
             position: fixed;
@@ -139,211 +145,504 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             z-index: 1000;
             overflow-y: auto;
         }
 
-        .reader-container {
-            max-width: 700px;
-            margin: 40px auto;
-            padding: 40px;
-            background: white;
-            box-shadow: 0 0 30px rgba(0,0,0,0.1);
-            min-height: 100vh;
-        }
-
-        .close-btn {
+        /* Toolbar */
+        .reader-toolbar {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 1001;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 1002;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .close-btn:hover {
-            background-color: #c0392b;
+        .reader-toolbar .title {
+            font-size: 16px;
+            color: #eee;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .toolbar-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            color: #eee;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .toolbar-btn.close {
+            background: #e74c3c;
+        }
+
+        .toolbar-btn.close:hover {
+            background: #c0392b;
+        }
+
+        .reader-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 10px 80px;
+            color: #d4d4d4;
+            line-height: 2;
+            font-size: 18px;
+        }
+
+        .reader-container h1 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 2em;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .reader-container h2 {
+            color: #fff;
+            margin: 20px 0 15px;
+            font-size: 1.6em;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .article-source {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         #reader-content {
-            font-size: 18px;
-            line-height: 1.8;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            text-align: justify;
         }
-        
+
+        #reader-content p {
+            margin-bottom: 1.5em;
+            text-indent: 2em;
+        }
+
         #reader-content img {
             max-width: 100%;
             height: auto;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        #reader-content a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        #reader-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Next chapter button */
+        .next-chapter-btn {
             display: block;
-            margin: 20px auto;
+            width: 100%;
+            max-width: 280px;
+            margin: 50px auto;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .next-chapter-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1a5276);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(52, 152, 219, 0.5);
+        }
+
+        .next-chapter-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .next-chapter-btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .next-chapter-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            top: 50%;
+            left: 50%;
+            margin-left: -12px;
+            margin-top: -12px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .chapter-divider {
+            text-align: center;
+            margin: 60px 0;
+            padding: 25px;
+            color: #666;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .chapter-divider::before,
+        .chapter-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 30%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+
+        .chapter-divider::before {
+            left: 0;
+        }
+
+        .chapter-divider::after {
+            right: 0;
+        }
+
+        .no-next-chapter {
+            text-align: center;
+            color: #666;
+            padding: 30px;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Scrollbar styling */
+        #reader-modal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #reader-modal::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        #reader-modal::-webkit-scrollbar-thumb {
+            background: #3a3a5e;
             border-radius: 4px;
         }
-        
-        #reader-content p {
-            margin-bottom: 1.5em;
+
+        #reader-modal::-webkit-scrollbar-thumb:hover {
+            background: #4a4a6e;
+        }
+
+        /* Font size controls */
+        .font-size-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .font-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #eee;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .font-btn:hover {
+            background: rgba(255,255,255,0.2);
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>My Clean Reader</h1>
 
-<div class="container">
-    <h1>📖 my clean reader</h1>
-
-    <div class="input-group">
-        <input type="text" id="url-input" placeholder="put the url of the novel here...">
-        <button id="save-btn" onclick="saveArticle()">catch and make it cleaner</button>
-    </div>
-
-    <ul class="article-list" id="article-list">
-        <li style="text-align:center; color:#888;">loading all the articles...</li>
-    </ul>
-</div>
-
-<div id="reader-modal">
-    <button class="close-btn" onclick="closeReader()">✕ close / return</button>
-    <div class="reader-container">
-        <h1 id="reader-title">titile of article</h1>
-        <div style="color:#888; margin-bottom:20px; font-size:0.9em;">
-            source: <span id="reader-site"></span> | time: <span id="reader-date"></span>
+        <div class="input-group">
+            <input type="text" id="url-input" placeholder="Put the URL of the article here...">
+            <button id="save-btn" onclick="saveArticle()">Fetch & Clean</button>
         </div>
-        <hr style="border:0; border-top:1px solid #eee; margin-bottom:30px;">
-        <div id="reader-content">
-            </div>
+
+        <ul class="article-list" id="article-list">
+        </ul>
     </div>
-</div>
 
-<script>
-    const API_URL = 'http://localhost:3000/api';
+    <div id="reader-modal">
+        <div class="reader-toolbar">
+            <span class="title" id="toolbar-title"></span>
+            <div class="toolbar-buttons">
+                <div class="font-size-controls">
+                    <button class="font-btn" onclick="changeFontSize(-2)">A-</button>
+                    <button class="font-btn" onclick="changeFontSize(2)">A+</button>
+                </div>
+                <button class="toolbar-btn close" onclick="closeReader()">Close</button>
+            </div>
+        </div>
+        <div class="reader-container">
+        </div>
+    </div>
 
-    window.onload = loadArticles;
+    <script>
+        let currentNextChapterUrl = null;
+        let currentFontSize = 18;
 
-    //loading articles
-    async function loadArticles() {
-        try {
-            const res = await fetch(`${API_URL}/articles`);
-            const articles = await res.json();
-            
-            const listEl = document.getElementById('article-list');
-            listEl.innerHTML = '';
+        // Load articles on page load
+        document.addEventListener('DOMContentLoaded', loadArticles);
 
-            if (articles.length === 0) {
-                listEl.innerHTML = '<li style="text-align:center; color:#aaa; padding:20px;">No article now, go and get one！</li>';
+        // Allow Enter key to submit
+        document.getElementById('url-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveArticle();
+        });
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
+            document.querySelector('.reader-container').style.fontSize = currentFontSize + 'px';
+        }
+
+        async function loadArticles() {
+            try {
+                const res = await fetch('/api/articles');
+                const articles = await res.json();
+                const list = document.getElementById('article-list');
+
+                if (articles.length === 0) {
+                    list.innerHTML = '<li class="empty-message">No articles yet. Add one above!</li>';
+                    return;
+                }
+
+                list.innerHTML = articles.map(a => `
+                    <li class="article-card" onclick="openReader(${a.id})">
+                        <div class="article-info">
+                            <span class="article-title">${a.title}</span>
+                            <span class="article-meta">
+                                ${a.site_name} | Saved: ${new Date(a.created_at).toLocaleString()}
+                            </span>
+                        </div>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteArticle(${a.id})">Delete</button>
+                    </li>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load articles:', err);
+            }
+        }
+
+        async function saveArticle() {
+            const input = document.getElementById('url-input');
+            const btn = document.getElementById('save-btn');
+            const url = input.value.trim();
+
+            if (!url) {
+                alert('Please enter a URL');
                 return;
             }
 
-            articles.forEach(article => {
-                const li = document.createElement('li');
-                li.className = 'article-card';
-                const date = new Date(article.created_at).toLocaleString();
+            btn.disabled = true;
+            btn.textContent = 'Fetching...';
+
+            try {
+                const res = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    input.value = '';
+                    loadArticles();
+                    alert('Article saved successfully!');
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to save'));
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Fetch & Clean';
+            }
+        }
+
+        async function deleteArticle(id) {
+            if (!confirm('Are you sure you want to delete this article?')) return;
+
+            try {
+                const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadArticles();
+                } else {
+                    alert('Failed to delete article');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function openReader(articleId) {
+            try {
+                const res = await fetch(`/api/articles/${articleId}`);
+                if (!res.ok) throw new Error('Failed to load article');
+                const article = await res.json();
+
+                const modal = document.getElementById('reader-modal');
+                const container = modal.querySelector('.reader-container');
+                const toolbarTitle = document.getElementById('toolbar-title');
+
+                // Store next chapter URL
+                currentNextChapterUrl = article.next_chapter_url;
                 
-                li.innerHTML = `
-                    <button class="delete-btn" onclick="deleteArticle(event, ${article.id})">Delete</button>
-                    <span class="article-title">${article.title || 'Untitled'}</span>
-                    <span class="article-meta">Saved at: ${date}</span>
+                // Update toolbar title
+                toolbarTitle.textContent = article.title;
+
+                // Build next chapter button HTML
+                const nextChapterHtml = currentNextChapterUrl ?
+                    `<button class="next-chapter-btn" onclick="loadNextChapter()">
+                        Next Chapter →
+                    </button>` :
+                    `<div class="no-next-chapter">
+                        No next chapter link found
+                    </div>`;
+
+                container.innerHTML = `
+                    <h1>${article.title}</h1>
+                    <div class="article-source">
+                        ${article.site_name} · ${new Date(article.created_at).toLocaleDateString()}
+                    </div>
+                    <div id="reader-content">${article.content}</div>
+                    <div id="next-chapter-container">
+                        ${nextChapterHtml}
+                    </div>
                 `;
-                li.onclick = () => openReader(article.id);
-                listEl.appendChild(li);
-            });
 
-        } catch (err) {
-            console.error(err);
-            document.getElementById('article-list').innerHTML = '<li style="color:red; text-align:center;">cannot connect to server,plz make sure that node server.js is working</li>';
+                modal.style.display = 'block';
+                modal.scrollTop = 0;
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load article');
+            }
         }
-    }
 
-    //getting new article
-    async function saveArticle() {
-        const input = document.getElementById('url-input');
-        const btn = document.getElementById('save-btn');
-        const url = input.value.trim();
-
-        if (!url) return alert('enter the link！');
-
-        btn.disabled = true;
-        btn.innerText = 'dealing...';
-
-        try {
-            const res = await fetch(`${API_URL}/save`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            });
-            
-            const data = await res.json();
-
-            if (res.ok) {
-                input.value = ''; 
-                alert('✅ article is saved successfully');
-                loadArticles(); 
-            } else {
-                alert('❌ failure: ' + (data.error || 'error unknown'));
+        async function loadNextChapter() {
+            if (!currentNextChapterUrl) {
+                alert('No next chapter link available');
+                return;
             }
 
-        } catch (err) {
-            alert('❌ failure in request: ' + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'catch and clean';
-        }
-    }
+            const btn = document.querySelector('.next-chapter-btn');
+            const container = document.getElementById('next-chapter-container');
 
-    // open the reader
-    async function openReader(id) {
-        const modal = document.getElementById('reader-modal');
-        const titleEl = document.getElementById('reader-title');
-        const contentEl = document.getElementById('reader-content');
-        const siteEl = document.getElementById('reader-site');
-        const dateEl = document.getElementById('reader-date');
+            btn.classList.add('loading');
+            btn.disabled = true;
 
-        modal.style.display = 'block';
-        titleEl.innerText = 'loading...';
-        contentEl.innerHTML = '<div style="text-align:center; padding:50px;">catching contents...</div>';
+            try {
+                const res = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: currentNextChapterUrl })
+                });
 
-        try {
-            const res = await fetch(`${API_URL}/articles/${id}`);
-            const article = await res.json();
+                const result = await res.json();
 
-            titleEl.innerText = article.title;
-            siteEl.innerText = article.site_name || 'source unknown';
-            dateEl.innerText = new Date(article.created_at).toLocaleString();
-            contentEl.innerHTML = article.content; 
+                if (!res.ok) {
+                    throw new Error(result.error || 'Failed to fetch next chapter');
+                }
 
-        } catch (err) {
-            titleEl.innerText = 'error';
-            contentEl.innerHTML = '<p style="color:red">cannot load content</p>';
-        }
-    }
+                const article = result.data;
 
-    //close reading
-    function closeReader() {
-        document.getElementById('reader-modal').style.display = 'none';
-    }
+                // Append new chapter content
+                const readerContent = document.getElementById('reader-content');
+                const newChapterHtml = `
+                    <div class="chapter-divider">
+                        · · ·
+                    </div>
+                    <h2>${article.title}</h2>
+                    ${article.content}
+                `;
+                readerContent.insertAdjacentHTML('beforeend', newChapterHtml);
 
-    // Delete article
-    async function deleteArticle(event, id) {
-        event.stopPropagation(); // Prevent opening the reader
-        if (!confirm('Are you sure you want to delete this article?')) return;
-        
-        try {
-            const res = await fetch(`${API_URL}/articles/${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                loadArticles(); // Reload the list
-            } else {
-                alert('Failed to delete article');
+                // Update next chapter URL
+                currentNextChapterUrl = article.next_chapter_url;
+
+                // Update button
+                if (currentNextChapterUrl) {
+                    container.innerHTML = `
+                        <button class="next-chapter-btn" onclick="loadNextChapter()">
+                            Next Chapter →
+                        </button>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="no-next-chapter">
+                            You've reached the end
+                        </div>
+                    `;
+                }
+
+                // Scroll to new chapter
+                const dividers = document.querySelectorAll('.chapter-divider');
+                if (dividers.length > 0) {
+                    dividers[dividers.length - 1].scrollIntoView({ behavior: 'smooth' });
+                }
+
+                // Refresh article list
+                loadArticles();
+
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load next chapter: ' + err.message);
+                btn.classList.remove('loading');
+                btn.disabled = false;
             }
-        } catch (err) {
-            alert('Error: ' + err.message);
         }
-    }
-</script>
 
+        function closeReader() {
+            document.getElementById('reader-modal').style.display = 'none';
+        }
+
+        // Close reader with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeReader();
+        });
+    </script>
 </body>
 </html>
