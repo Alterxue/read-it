@@ -528,8 +528,8 @@
                 const container = modal.querySelector('.reader-container');
                 const toolbarTitle = document.getElementById('toolbar-title');
 
-                // Store next chapter URL
-                currentNextChapterUrl = article.next_chapter_url;
+                // Store next chapter URL (use next_url from database)
+                currentNextChapterUrl = article.next_url;
                 
                 // Update toolbar title
                 toolbarTitle.textContent = article.title;
@@ -600,8 +600,8 @@
                 `;
                 readerContent.insertAdjacentHTML('beforeend', newChapterHtml);
 
-                // Update next chapter URL
-                currentNextChapterUrl = article.next_chapter_url;
+                // Update next chapter URL (use next_url from database)
+                currentNextChapterUrl = article.next_url;
 
                 // Update button
                 if (currentNextChapterUrl) {

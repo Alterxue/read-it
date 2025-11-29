@@ -1,46 +1,70 @@
-# 📚 Read-It Application - JSON Version
+# 📚 Read-It Application
 
-This is the JSON storage version of the Read-It application (original version).
+A clean web article reader with PostgreSQL storage.
 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Start the application
+# 1. Install dependencies
+npm install
+
+# 2. Configure database
+cp .env.example .env
+# Edit .env and set your PostgreSQL password
+
+# 3. Start the application
 node server.js
 
-# 2. Open in browser
+# 4. Open browser
 http://localhost:3000
 ```
 
 ## 📝 Features
 
 - 📖 Scrape and save articles from URLs
-- 📚 View list of saved articles
-- 🔍 View article details
-- 🗑️ Delete unwanted articles
-- ➡️ Jump to next chapter
+- 📚 View saved articles list
+- 🔍 Clean reading format
+- 🗑️ Delete articles
+- ➡️ Auto-detect next chapter links
+- 🛡️ Bypass Cloudflare protection
 
-## 📁 File Structure
+## 📁 Project Structure
 
 ```
 read-it/
-├── server.js          # Express server (JSON storage)
-├── articles.json      # Article data storage
-├── package.json       # npm dependencies
-├── public/
-│   └── index.html     # Frontend page
-└── node_modules/      # Dependencies
+├── server.js       # Express server
+├── .env            # Database config
+├── package.json    # Dependencies
+└── public/
+    └── index.html  # Frontend
 ```
 
-## 💾 Data Storage
+## 🗄️ Database Setup
 
-All articles are saved in the `articles.json` file.
+```bash
+# Create database and table
+sudo -u postgres psql -c "CREATE DATABASE my_reader;"
+sudo -u postgres psql -d my_reader -c "
+CREATE TABLE articles (
+    id SERIAL PRIMARY KEY,
+    title TEXT,
+    original_url TEXT,
+    content TEXT,
+    excerpt TEXT,
+    site_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    next_url TEXT
+);"
+```
 
-## 🛑 Stop the Application
+## ⚙️ Configuration
 
-Press `Ctrl + C` in the terminal to stop the server.
+`.env` file:
 
----
-
-**Version**: 1.0.0 (JSON Storage)  
-**Status**: ✅ Ready to use
+```
+DB_HOST=localhost
+DB_PORT=5433
+DB_NAME=my_reader
+DB_USER=postgres
+DB_PASSWORD=your_password
+```

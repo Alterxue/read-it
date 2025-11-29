@@ -1,82 +1,84 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
 const path = require('path');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const { Pool } = require('pg');
 
 // Use stealth plugin to bypass Cloudflare detection
 puppeteer.use(StealthPlugin());
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'articles.json');
+
+// PostgreSQL connection pool
+const pool = new Pool({
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5433,
+    database: process.env.DB_NAME || 'my_reader',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || ''
+});
+
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+    if (err) {
+        console.error('❌ Database connection failed:', err.message);
+    } else {
+        console.log('✅ Database connected successfully');
+    }
+});
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Load articles from file
-function loadArticles() {
-    try {
-        if (fs.existsSync(DATA_FILE)) {
-            const data = fs.readFileSync(DATA_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (err) {
-        console.error('Error loading articles:', err.message);
-    }
-    return [];
-}
-
-// Save articles to file
-function saveArticles() {
-    try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(articles, null, 2));
-    } catch (err) {
-        console.error('Error saving articles:', err.message);
-    }
-}
-
-// Persistent storage
-let articles = loadArticles();
-let nextId = articles.length > 0 ? Math.max(...articles.map(a => a.id)) + 1 : 1;
-
 // Get all articles list
-app.get('/api/articles', (req, res) => {
-    const list = articles.map(a => ({
-        id: a.id,
-        title: a.title,
-        site_name: a.site_name,
-        created_at: a.created_at
-    }));
-    res.json(list.reverse()); // newest first
+app.get('/api/articles', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, title, site_name, created_at FROM articles ORDER BY created_at DESC'
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching articles:', err.message);
+        res.status(500).json({ error: 'Failed to fetch articles' });
+    }
 });
 
 // Get single article by id
-app.get('/api/articles/:id', (req, res) => {
+app.get('/api/articles/:id', async (req, res) => {
     const id = parseInt(req.params.id);
-    const article = articles.find(a => a.id === id);
-    if (article) {
-        res.json(article);
-    } else {
-        res.status(404).json({ error: 'Article not found' });
+    try {
+        const result = await pool.query('SELECT * FROM articles WHERE id = $1', [id]);
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ error: 'Article not found' });
+        }
+    } catch (err) {
+        console.error('Error fetching article:', err.message);
+        res.status(500).json({ error: 'Failed to fetch article' });
     }
 });
 
 // Delete article by id
-app.delete('/api/articles/:id', (req, res) => {
+app.delete('/api/articles/:id', async (req, res) => {
     const id = parseInt(req.params.id);
-    const index = articles.findIndex(a => a.id === id);
-    if (index !== -1) {
-        articles.splice(index, 1);
-        saveArticles(); // Save to file
-        console.log(`🗑️ Article ${id} deleted`);
-        res.json({ message: 'Article deleted successfully' });
-    } else {
-        res.status(404).json({ error: 'Article not found' });
+    try {
+        const result = await pool.query('DELETE FROM articles WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length > 0) {
+            console.log(`🗑️ Article ${id} deleted`);
+            res.json({ message: 'Article deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'Article not found' });
+        }
+    } catch (err) {
+        console.error('Error deleting article:', err.message);
+        res.status(500).json({ error: 'Failed to delete article' });
     }
 });
 
@@ -90,8 +92,7 @@ app.post('/api/save', async (req, res) => {
 
     let browser;
     try {
-        // Use puppeteer with stealth to bypass Cloudflare protection
-        console.log(`Fetching: ${url}`);
+        console.log(`🔍 Fetching: ${url}`);
         browser = await puppeteer.launch({ 
             headless: 'new', // Run in background without popup
             args: [
@@ -133,16 +134,13 @@ app.post('/api/save', async (req, res) => {
         // Extra wait for page to fully load
         await new Promise(r => setTimeout(r, 2000));
         
-        // Find next chapter link before getting content
+        // Find next chapter link - using same logic as JSON version
         const nextChapterUrl = await page.evaluate(() => {
-            // Chinese patterns for next chapter
             const chinesePatterns = ['下一章', '下一页', '下章', '下页', '下一节', '继续阅读', '下一篇'];
-            // English patterns
             const englishPatterns = ['next chapter', 'next page', 'next'];
-            
             const links = Array.from(document.querySelectorAll('a'));
             
-            // First try: exact Chinese text match
+            // Try Chinese patterns first
             for (const link of links) {
                 const text = link.textContent?.trim() || '';
                 const href = link.getAttribute('href');
@@ -159,7 +157,7 @@ app.post('/api/save', async (req, res) => {
                 }
             }
             
-            // Second try: English text match
+            // Try English patterns
             for (const link of links) {
                 const text = link.textContent?.trim().toLowerCase() || '';
                 const href = link.getAttribute('href');
@@ -176,19 +174,12 @@ app.post('/api/save', async (req, res) => {
                 }
             }
             
-            // Third try: common CSS selectors
-            const selectors = [
-                'a.next', 'a#next', '.next a', '#next a',
-                'a[rel="next"]', 'a.nextchapter', 'a.next-chapter',
-                '.chapter-nav a:last-child', '.pagination a:last-child'
-            ];
-            
+            // Try CSS selectors as last resort
+            const selectors = ['a.next', 'a#next', '.next-chapter', 'a[rel="next"]'];
             for (const sel of selectors) {
                 try {
                     const el = document.querySelector(sel);
-                    if (el && el.href) {
-                        return el.href;
-                    }
+                    if (el && el.href) return el.href;
                 } catch (e) {
                     continue;
                 }
@@ -197,7 +188,7 @@ app.post('/api/save', async (req, res) => {
             return null;
         });
         
-        console.log(`Next chapter URL: ${nextChapterUrl || 'not found'}`);
+        console.log(`Next chapter: ${nextChapterUrl || 'not found'}`);
         
         const html = await page.content();
         await browser.close();
@@ -224,18 +215,17 @@ app.post('/api/save', async (req, res) => {
             }
             
             if (body && body.innerHTML.trim().length > 0) {
-                const article = {
-                    id: nextId++,
-                    title: title.trim(),
-                    content: body.innerHTML,
-                    excerpt: body.textContent?.substring(0, 200).trim() || '',
-                    site_name: new URL(url).hostname,
-                    original_url: url,
-                    next_chapter_url: nextChapterUrl,
-                    created_at: new Date().toISOString()
-                };
-                articles.push(article);
-                saveArticles();
+                const articleTitle = title.trim();
+                const content = body.innerHTML;
+                const excerpt = body.textContent?.substring(0, 200).trim() || '';
+                const siteName = new URL(url).hostname;
+                
+                const result = await pool.query(
+                    `INSERT INTO articles (title, content, excerpt, site_name, original_url, next_url)
+                     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                    [articleTitle, content, excerpt, siteName, url, nextChapterUrl]
+                );
+                const article = result.rows[0];
                 console.log(`✅ Article saved (fallback): ${article.title}`);
                 return res.json({ message: 'Article saved successfully', data: article });
             }
@@ -244,20 +234,14 @@ app.post('/api/save', async (req, res) => {
             return res.status(500).json({ error: 'Failed to parse article - no content found' });
         }
 
-        // Save to memory storage
-        const article = {
-            id: nextId++,
-            title: parsed.title,
-            content: parsed.content,
-            excerpt: parsed.excerpt,
-            site_name: parsed.siteName || new URL(url).hostname,
-            original_url: url,
-            next_chapter_url: nextChapterUrl,
-            created_at: new Date().toISOString()
-        };
-
-        articles.push(article);
-        saveArticles();
+        // Save to database
+        const siteName = parsed.siteName || new URL(url).hostname;
+        const result = await pool.query(
+            `INSERT INTO articles (title, content, excerpt, site_name, original_url, next_url)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [parsed.title, parsed.content, parsed.excerpt, siteName, url, nextChapterUrl]
+        );
+        const article = result.rows[0];
 
         console.log(`✅ Article saved: ${article.title}`);
         res.json({ message: 'Article saved successfully', data: article });
