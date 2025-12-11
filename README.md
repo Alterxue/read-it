@@ -1,6 +1,6 @@
 # 📚 Read-It Application
 
-A clean web article reader with PostgreSQL storage.
+A clean web article and book reader with PostgreSQL storage.
 
 ## 🚀 Quick Start
 
@@ -21,18 +21,20 @@ http://localhost:3000
 
 ## 📝 Features
 
-- 📖 Scrape and save articles from URLs
-- 📚 View saved articles list
+- 📖 Save single articles from URLs
+- 📚 Download entire books (auto-chapter crawling)
+- 📚 Continue downloading chapters for existing books (auto-detect next chapter)
 - 🔍 Clean reading format
-- 🗑️ Delete articles
+- 🗑️ Delete articles or books
 - ➡️ Auto-detect next chapter links
 - 🛡️ Bypass Cloudflare protection
+- ✈️ Offline reading (PWA support)
 
 ## 📁 Project Structure
 
 ```
 read-it/
-├── server.js       # Express server
+├── server.js       # Express server (PostgreSQL)
 ├── .env            # Database config
 ├── package.json    # Dependencies
 └── public/
@@ -42,9 +44,16 @@ read-it/
 ## 🗄️ Database Setup
 
 ```bash
-# Create database and table
+# Create database and tables
 sudo -u postgres psql -c "CREATE DATABASE my_reader;"
 sudo -u postgres psql -d my_reader -c "
+CREATE TABLE books (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    site_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    chapter_count INTEGER DEFAULT 0
+);
 CREATE TABLE articles (
     id SERIAL PRIMARY KEY,
     title TEXT,
@@ -53,8 +62,11 @@ CREATE TABLE articles (
     excerpt TEXT,
     site_name TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    next_url TEXT
-);"
+    next_url TEXT,
+    book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
+    chapter_order INTEGER DEFAULT 0
+);
+"
 ```
 
 ## ⚙️ Configuration
@@ -68,3 +80,26 @@ DB_NAME=my_reader
 DB_USER=postgres
 DB_PASSWORD=your_password
 ```
+
+## 🖥️ UI Overview
+
+- **Articles Tab**: Save and view single articles
+- **Bookshelf Tab**: Download whole books, view chapters, continue download from last chapter
+- **Continue Download**: No need to input URL, system auto-detects last chapter's next_url
+- **Progress**: Real-time download progress for books and chapters
+
+## 📚 Book Download & Continue API
+
+- **Download Book**: `/api/books/download` (POST)
+    - `{ url, bookName, maxChapters }`
+- **Continue Book Download**: `/api/books/:id/continue` (POST)
+    - `{ url, maxChapters }` (front-end auto-fills url)
+- **Check Progress**: `/api/books/download/:id` (GET)
+
+## 📱 Offline Reading
+
+- PWA support: Install as app, cache articles/books for offline use
+
+---
+
+**Version**: 2.0.0 (PostgreSQL, Books/Articles, Continue Download)

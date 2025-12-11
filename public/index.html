@@ -1,648 +1,960 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Clean Reader</title>
+    <title>Read-It - 阅读器</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #0f0f1a;
             color: #eee;
             min-height: 100vh;
         }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        h1 {
+        .container { max-width: 1000px; margin: 0 auto; padding: 30px 20px; }
+        
+        /* Header */
+        .header {
             text-align: center;
             margin-bottom: 30px;
-            font-size: 2.5em;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #2a2a4e;
         }
-
-        .input-group {
+        .header h1 { font-size: 2.2em; margin-bottom: 8px; }
+        .header p { color: #888; font-size: 14px; }
+        
+        /* Tabs */
+        .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 5px;
+            margin-bottom: 25px;
+            background: #1a1a2e;
+            padding: 5px;
+            border-radius: 12px;
         }
-
-        #url-input {
+        .tab-btn {
             flex: 1;
-            padding: 15px 20px;
-            font-size: 16px;
+            padding: 12px 20px;
+            background: transparent;
+            color: #888;
             border: none;
-            border-radius: 8px;
-            background: #16213e;
-            color: #eee;
-        }
-
-        #url-input::placeholder {
-            color: #666;
-        }
-
-        #save-btn {
-            padding: 15px 30px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #e94560, #c23a51);
-            color: white;
             cursor: pointer;
-            transition: all 0.3s;
+            font-size: 15px;
+            border-radius: 8px;
+            transition: all 0.2s;
         }
-
-        #save-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
-        }
-
-        #save-btn:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .article-list {
-            list-style: none;
-        }
-
-        .article-card {
-            background: #16213e;
-            border-radius: 10px;
+        .tab-btn.active { background: #9b59b6; color: #fff; }
+        .tab-btn:hover:not(.active) { color: #fff; background: rgba(155,89,182,0.3); }
+        
+        /* Input area */
+        .input-section {
+            background: #1a1a2e;
+            border-radius: 12px;
             padding: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-row:last-child { margin-bottom: 0; }
+        .input-row input {
+            flex: 1;
+            padding: 14px 18px;
+            font-size: 15px;
+            border: 2px solid #2a2a4e;
+            border-radius: 10px;
+            background: #0f0f1a;
+            color: #eee;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus { outline: none; border-color: #9b59b6; }
+        .input-row input::placeholder { color: #555; }
+        
+        .btn {
+            padding: 14px 24px;
+            font-size: 15px;
+            border: none;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .btn-primary { background: #e94560; color: white; }
+        .btn-primary:hover { background: #d63850; transform: translateY(-1px); }
+        .btn-book { background: #9b59b6; color: white; }
+        .btn-book:hover { background: #8e44ad; transform: translateY(-1px); }
+        .btn-secondary { background: #2a2a4e; color: #aaa; }
+        .btn-secondary:hover { background: #3a3a5e; color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        /* Book options */
+        .book-options {
+            display: none;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #2a2a4e;
+            margin-top: 15px;
+        }
+        .book-options.show { display: flex; flex-wrap: wrap; }
+        .book-options input { min-width: 120px; }
+        
+        /* Progress bar */
+        .download-progress {
+            display: none;
+            background: linear-gradient(135deg, #1a1a2e, #2a2a4e);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #9b59b6;
+        }
+        .download-progress.show { display: block; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .progress-title { font-weight: 500; }
+        .progress-percent { color: #9b59b6; }
+        .progress-bar {
+            height: 8px;
+            background: #0f0f1a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9b59b6, #e94560);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 4px;
+        }
+        .progress-status { margin-top: 10px; font-size: 13px; color: #888; }
+        
+        /* Section */
+        .section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 1.1em;
+            color: #9b59b6;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Book card - Book List Style */
+        .book-grid { display: grid; gap: 15px; }
+        .book-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #2a2a4e;
+            transition: all 0.2s;
+        }
+        .book-card:hover { border-color: #9b59b6; transform: translateY(-2px); }
+        .book-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; cursor: pointer;
+        }
+        .book-cover {
+            width: 50px; height: 65px; background: linear-gradient(135deg, #9b59b6, #e94560); border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px; flex-shrink: 0;
+        }
+        .book-info { flex: 1; }
+        .book-info h3 { font-size: 16px; margin-bottom: 6px; color: #fff; }
+        .book-meta { font-size: 12px; color: #888; }
+        .book-meta span { margin-right: 12px; }
+        .book-actions { display: flex; gap: 8px; }
+        .btn-icon {
+            width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .btn-icon.expand { background: #3498db; color: white; }
+        .btn-icon.delete { background: #e74c3c; color: white; }
+        .btn-icon:hover { transform: scale(1.1); }
+        
+        /* Chapter list */
+        .chapter-list {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #0f0f1a;
+            border-top: 1px solid #2a2a4e;
+        }
+        .chapter-list.show { display: block; }
+        .chapter-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .chapter-item:hover { background: #1a1a2e; padding-left: 25px; }
+        .chapter-num {
+            color: #9b59b6;
+            font-size: 12px;
+            min-width: 40px;
+        }
+        .chapter-title { flex: 1; font-size: 14px; }
+        
+        /* Article card - Article List Style */
+        .article-card {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
             border-left: 4px solid #e94560;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .article-card:hover {
-            transform: translateX(10px);
-            background: #1a2744;
-        }
-
-        .article-info {
-            flex: 1;
-        }
-
-        .article-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        .article-meta {
-            font-size: 12px;
-            color: #7f8c8d;
-        }
-
-        .delete-btn {
-            padding: 8px 15px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .article-card:hover .delete-btn {
-            opacity: 1;
-        }
-
-        .delete-btn:hover {
-            background: #c0392b;
-        }
-
-        .empty-message {
+        .article-card:hover { background: #222244; transform: translateX(5px); }
+        .article-info { flex: 1; }
+        .article-title { font-size: 15px; font-weight: 500; margin-bottom: 5px; }
+        .article-meta { font-size: 12px; color: #888; }
+        
+        /* Empty state */
+        .empty-state {
             text-align: center;
-            color: #666;
-            padding: 40px;
+            padding: 50px 20px;
+            color: #555;
         }
-
-        /* Reader modal - Beautiful dark theme */
-        #reader-modal {
+        .empty-state .icon { font-size: 48px; margin-bottom: 15px; }
+        .empty-state p { font-size: 14px; }
+        
+        /* ========== Reader - Article Mode ========== */
+        .reader-modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 1000;
             overflow-y: auto;
         }
-
-        /* Toolbar */
+        .reader-modal.article-mode {
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        }
+        .reader-modal.book-mode {
+            background: #f5f0e8; /* Paper-like background */
+        }
+        
+        /* Article Reader Toolbar */
         .reader-toolbar {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            background: rgba(22, 33, 62, 0.95);
-            backdrop-filter: blur(10px);
+            top: 0; left: 0; right: 0;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 30px;
+            padding: 0 20px;
             z-index: 1002;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-
-        .reader-toolbar .title {
-            font-size: 16px;
-            color: #eee;
-            max-width: 60%;
+        .article-mode .reader-toolbar {
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #2a2a4e;
+        }
+        .book-mode .reader-toolbar {
+            background: rgba(139, 90, 43, 0.95);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        .toolbar-title {
+            font-size: 15px;
+            max-width: 50%;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .toolbar-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .toolbar-btn {
-            padding: 8px 16px;
-            background: rgba(255,255,255,0.1);
-            color: #eee;
+        .article-mode .toolbar-title { color: #eee; }
+        .book-mode .toolbar-title { color: #fff; }
+        .toolbar-buttons { display: flex; gap: 8px; align-items: center; }
+        .tool-btn {
+            padding: 8px 14px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.2s;
         }
-
-        .toolbar-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .toolbar-btn.close {
-            background: #e74c3c;
-        }
-
-        .toolbar-btn.close:hover {
-            background: #c0392b;
-        }
-
-        .reader-container {
-            max-width: 1200px;
+        .article-mode .tool-btn { background: rgba(255,255,255,0.1); color: #eee; }
+        .article-mode .tool-btn:hover { background: rgba(255,255,255,0.2); }
+        .book-mode .tool-btn { background: rgba(255,255,255,0.2); color: #fff; }
+        .book-mode .tool-btn:hover { background: rgba(255,255,255,0.3); }
+        .tool-btn.close { background: #e74c3c; color: white; }
+        .font-btn { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
+        
+        /* Article Reader Content */
+        .reader-content {
+            max-width: 750px;
             margin: 0 auto;
-            padding: 100px 10px 80px;
+            padding: 80px 25px 100px;
+        }
+        .article-mode .reader-content {
             color: #d4d4d4;
             line-height: 2;
-            font-size: 18px;
         }
-
-        .reader-container h1 {
-            color: #fff;
-            margin-bottom: 15px;
-            font-size: 2em;
-            font-weight: 600;
-            line-height: 1.4;
+        .book-mode .reader-content {
+            color: #3a3a3a;
+            line-height: 2.2;
+            font-family: 'Georgia', 'Noto Serif SC', serif;
         }
-
-        .reader-container h2 {
-            color: #fff;
-            margin: 20px 0 15px;
-            font-size: 1.6em;
-            font-weight: 600;
-            line-height: 1.4;
+        
+        .content-header { margin-bottom: 30px; padding-bottom: 20px; }
+        .article-mode .content-header { border-bottom: 1px solid #2a2a4e; }
+        .book-mode .content-header { border-bottom: 2px solid #d4c4a8; }
+        
+        .content-title { font-size: 1.6em; margin-bottom: 10px; line-height: 1.4; }
+        .article-mode .content-title { color: #fff; }
+        .book-mode .content-title { color: #2c2c2c; }
+        
+        .content-meta { font-size: 13px; }
+        .article-mode .content-meta { color: #888; }
+        .book-mode .content-meta { color: #8b7355; }
+        
+        #reader-body { text-align: justify; }
+        #reader-body p { margin-bottom: 1.5em; text-indent: 2em; }
+        #reader-body img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; }
+        .book-mode #reader-body { font-size: 18px; }
+        
+        /* Chapter Navigation */
+        .nav-footer {
+            margin-top: 50px;
+            padding-top: 25px;
         }
-
-        .article-source {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        #reader-content {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            text-align: justify;
-        }
-
-        #reader-content p {
-            margin-bottom: 1.5em;
-            text-indent: 2em;
-        }
-
-        #reader-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-
-        #reader-content a {
-            color: #3498db;
-            text-decoration: none;
-        }
-
-        #reader-content a:hover {
-            text-decoration: underline;
-        }
-
-        /* Next chapter button */
-        .next-chapter-btn {
-            display: block;
-            width: 100%;
-            max-width: 280px;
-            margin: 50px auto;
-            padding: 16px 32px;
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
+        .article-mode .nav-footer { border-top: 1px solid #2a2a4e; }
+        .book-mode .nav-footer { border-top: 2px solid #d4c4a8; }
+        
+        .nav-buttons { display: flex; gap: 15px; }
+        .nav-btn {
+            flex: 1;
+            padding: 14px 20px;
             border: none;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
         }
-
-        .next-chapter-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #1a5276);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(52, 152, 219, 0.5);
+        .article-mode .nav-btn {
+            background: #2a2a4e;
+            color: #eee;
         }
-
-        .next-chapter-btn:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .article-mode .nav-btn:hover:not(:disabled) { background: #3a3a5e; }
+        .article-mode .nav-btn.next { background: #9b59b6; }
+        .article-mode .nav-btn.next:hover:not(:disabled) { background: #8e44ad; }
+        
+        .book-mode .nav-btn {
+            background: #d4c4a8;
+            color: #5a4a3a;
         }
-
-        .next-chapter-btn.loading {
-            position: relative;
-            color: transparent;
+        .book-mode .nav-btn:hover:not(:disabled) { background: #c4b498; }
+        .book-mode .nav-btn.next { background: #8b5a2b; color: #fff; }
+        .book-mode .nav-btn.next:hover:not(:disabled) { background: #7a4a1b; }
+        
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .no-more { text-align: center; padding: 20px; font-style: italic; font-size: 14px; }
+        .article-mode .no-more { color: #666; }
+        .book-mode .no-more { color: #a0906a; }
+        
+        /* Book Mode Only - Chapter List Sidebar */
+        .chapter-sidebar {
+            display: none;
+            position: fixed;
+            left: 0; top: 56px; bottom: 0;
+            width: 280px;
+            overflow-y: auto;
+            z-index: 1001;
+            padding: 15px;
         }
-
-        .next-chapter-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            top: 50%;
-            left: 50%;
-            margin-left: -12px;
-            margin-top: -12px;
-            border: 3px solid rgba(255,255,255,0.3);
+        .book-mode .chapter-sidebar { background: #e8dcc8; }
+        .chapter-sidebar.show { display: block; }
+        .sidebar-title { font-size: 14px; color: #8b7355; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #d4c4a8; }
+        .sidebar-item {
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #5a4a3a;
+            transition: all 0.2s;
+        }
+        .sidebar-item:hover { background: #d4c4a8; }
+        .sidebar-item.active { background: #8b5a2b; color: #fff; }
+        
+        /* Loading Animation */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .chapter-divider {
-            text-align: center;
-            margin: 60px 0;
-            padding: 25px;
-            color: #666;
-            font-size: 14px;
-            position: relative;
-        }
-
-        .chapter-divider::before,
-        .chapter-divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 30%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        }
-
-        .chapter-divider::before {
-            left: 0;
-        }
-
-        .chapter-divider::after {
-            right: 0;
-        }
-
-        .no-next-chapter {
-            text-align: center;
-            color: #666;
-            padding: 30px;
-            font-style: italic;
-            font-size: 14px;
-        }
-
-        /* Scrollbar styling */
-        #reader-modal::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #reader-modal::-webkit-scrollbar-track {
-            background: #1a1a2e;
-        }
-
-        #reader-modal::-webkit-scrollbar-thumb {
-            background: #3a3a5e;
-            border-radius: 4px;
-        }
-
-        #reader-modal::-webkit-scrollbar-thumb:hover {
-            background: #4a4a6e;
-        }
-
-        /* Font size controls */
-        .font-size-controls {
-            display: flex;
-            gap: 5px;
-        }
-
-        .font-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.1);
-            color: #eee;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-
-        .font-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3a3a5e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a6e; }
+        .book-mode ::-webkit-scrollbar-thumb { background: #c4b498; }
+        .book-mode ::-webkit-scrollbar-thumb:hover { background: #b4a488; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>My Clean Reader</h1>
-
-        <div class="input-group">
-            <input type="text" id="url-input" placeholder="Put the URL of the article here...">
-            <button id="save-btn" onclick="saveArticle()">Fetch & Clean</button>
+        <div class="header">
+            <h1>📚 Read-It</h1>
+            <p>Offline Reader - Save articles and books, read anytime</p>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('articles')">📄 Articles</button>
+            <button class="tab-btn" onclick="switchTab('books')">📚 Bookshelf</button>
         </div>
 
-        <ul class="article-list" id="article-list">
-        </ul>
-    </div>
-
-    <div id="reader-modal">
-        <div class="reader-toolbar">
-            <span class="title" id="toolbar-title"></span>
-            <div class="toolbar-buttons">
-                <div class="font-size-controls">
-                    <button class="font-btn" onclick="changeFontSize(-2)">A-</button>
-                    <button class="font-btn" onclick="changeFontSize(2)">A+</button>
-                </div>
-                <button class="toolbar-btn close" onclick="closeReader()">Close</button>
+        <!-- Article Input Section (only for Articles tab) -->
+        <div id="article-input-section" class="input-section">
+            <div class="input-row">
+                <input type="text" id="url-input" placeholder="Enter article URL...">
+                <button class="btn btn-primary" id="save-btn" onclick="saveArticle()">Save Article</button>
             </div>
         </div>
-        <div class="reader-container">
+
+        <!-- Book Download Section (only for Books tab, improved layout) -->
+        <div id="book-download-section" class="input-section" style="display:none;">
+            <form id="book-download-form" onsubmit="event.preventDefault(); startDownload();">
+                <div class="input-row">
+                    <input type="text" id="book-chapter-url" placeholder="First chapter URL..." required>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="book-name" placeholder="Book Name (optional)">
+                    <input type="number" id="max-chapters" value="100" min="1" max="500" style="width:100px">
+                </div>
+                <div class="input-row">
+                    <button class="btn btn-book" type="submit">📚 Download Book</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Download Progress -->
+        <div class="download-progress" id="download-progress">
+            <div class="progress-header">
+                <span class="progress-title">📥 Downloading...</span>
+                <span class="progress-percent" id="progress-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-status" id="progress-status">Preparing...</div>
+        </div>
+        
+        <!-- Articles Tab -->
+        <div id="articles-tab" class="section">
+            <div class="section-title">📄 My Articles</div>
+            <div id="article-list"></div>
+        </div>
+        
+        <!-- Books Tab -->
+        <div id="books-tab" class="section" style="display:none;">
+            <div class="section-title">📚 My Bookshelf</div>
+            <div id="book-list" class="book-grid"></div>
+        </div>
+
+        <!-- Continue Download Modal (improved) -->
+        <div id="continue-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:#fff; max-width:380px; margin:120px auto; padding:32px 24px; border-radius:16px; box-shadow:0 4px 32px #0003; text-align:center;">
+                <h2 style="margin-bottom:18px; color:#9b59b6;">Continue Book Download</h2>
+                <div id="continue-book-info" style="margin-bottom:18px; font-size:1.05em; color:#555;"></div>
+                <form id="continue-form" onsubmit="event.preventDefault(); submitContinueDownload();">
+                    <input type="number" id="continue-max" value="50" min="1" max="500" style="width:100%;margin-bottom:16px; padding:12px; border-radius:8px; border:1px solid #ccc; font-size:15px;">
+                    <input type="hidden" id="continue-book-id">
+                    <button type="submit" class="btn btn-book" style="width:100%;font-size:16px;">Start Download</button>
+                    <button type="button" onclick="closeContinueModal()" style="width:100%;margin-top:10px; background:#eee; color:#888; border-radius:8px; padding:12px; border:none;">Cancel</button>
+                </form>
+                <div id="continue-progress" style="margin-top:18px; font-size:15px; color:#888;"></div>
+            </div>
         </div>
     </div>
-
+    
+    <!-- Reader Modal -->
+    <div class="reader-modal" id="reader-modal">
+        <div class="reader-toolbar">
+            <span class="toolbar-title" id="toolbar-title"></span>
+            <div class="toolbar-buttons">
+                <button class="tool-btn font-btn" onclick="changeFontSize(-2)">A-</button>
+                <button class="tool-btn font-btn" onclick="changeFontSize(2)">A+</button>
+                <button class="tool-btn" id="toc-btn" onclick="toggleSidebar()" style="display:none">📑 TOC</button>
+                <button class="tool-btn close" onclick="closeReader()">Close</button>
+            </div>
+        </div>
+        
+        <!-- Chapter sidebar for books -->
+        <div class="chapter-sidebar" id="chapter-sidebar"></div>
+        
+        <div class="reader-content" id="reader-container">
+            <div class="content-header">
+                <h1 class="content-title" id="reader-title"></h1>
+                <div class="content-meta" id="reader-meta"></div>
+            </div>
+            <div id="reader-body"></div>
+            <div class="nav-footer">
+                <div class="nav-buttons" id="nav-buttons"></div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        let currentNextChapterUrl = null;
         let currentFontSize = 18;
-
-        // Load articles on page load
-        document.addEventListener('DOMContentLoaded', loadArticles);
-
-        // Allow Enter key to submit
-        document.getElementById('url-input').addEventListener('keypress', (e) => {
+        let currentMode = 'article'; // 'article' or 'book'
+        let currentBookId = null;
+        let currentChapterIndex = 0;
+        let bookChapters = [];
+        let currentNextUrl = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadArticles();
+            loadBooks();
+        });
+        
+        document.getElementById('url-input').addEventListener('keypress', e => {
             if (e.key === 'Enter') saveArticle();
         });
-
-        function changeFontSize(delta) {
-            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
-            document.querySelector('.reader-container').style.fontSize = currentFontSize + 'px';
+        
+        // ===== Tab Switch =====
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('articles-tab').style.display = tab === 'articles' ? 'block' : 'none';
+            document.getElementById('books-tab').style.display = tab === 'books' ? 'block' : 'none';
+            document.getElementById('article-input-section').style.display = tab === 'articles' ? 'block' : 'none';
+            document.getElementById('book-download-section').style.display = tab === 'books' ? 'block' : 'none';
         }
-
+        
+        // ===== Load Article List =====
         async function loadArticles() {
             try {
                 const res = await fetch('/api/articles');
                 const articles = await res.json();
                 const list = document.getElementById('article-list');
-
+                
                 if (articles.length === 0) {
-                    list.innerHTML = '<li class="empty-message">No articles yet. Add one above!</li>';
+                    list.innerHTML = `<div class="empty-state">
+                        <div class="icon">📄</div>
+                        <p>No articles yet. Enter a URL to save one!</p>
+                    </div>`;
                     return;
                 }
-
+                
                 list.innerHTML = articles.map(a => `
-                    <li class="article-card" onclick="openReader(${a.id})">
+                    <div class="article-card" onclick="openArticle(${a.id})">
                         <div class="article-info">
-                            <span class="article-title">${a.title}</span>
-                            <span class="article-meta">
-                                ${a.site_name} | Saved: ${new Date(a.created_at).toLocaleString()}
-                            </span>
+                            <div class="article-title">${a.title || 'Untitled'}</div>
+                            <div class="article-meta">${a.site_name} · ${new Date(a.created_at).toLocaleDateString()}</div>
                         </div>
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteArticle(${a.id})">Delete</button>
-                    </li>
+                        <button class="btn-icon delete" onclick="event.stopPropagation(); deleteArticle(${a.id})">🗑</button>
+                    </div>
                 `).join('');
             } catch (err) {
                 console.error('Failed to load articles:', err);
             }
         }
-
-        async function saveArticle() {
-            const input = document.getElementById('url-input');
-            const btn = document.getElementById('save-btn');
-            const url = input.value.trim();
-
-            if (!url) {
-                alert('Please enter a URL');
+        
+        // ===== Load Book List =====
+        async function loadBooks() {
+            try {
+                const res = await fetch('/api/books');
+                const books = await res.json();
+                const list = document.getElementById('book-list');
+                
+                if (books.length === 0) {
+                    list.innerHTML = `<div class="empty-state">
+                        <div class="icon">📚</div>
+                        <p>Your bookshelf is empty. Download a book!</p>
+                    </div>`;
+                    return;
+                }
+                
+                list.innerHTML = books.map(b => `
+                    <div class="book-card" id="book-${b.id}">
+                        <div class="book-header" onclick="toggleChapters(${b.id})">
+                            <div class="book-cover">📖</div>
+                            <div class="book-info">
+                                <h3>${b.name}</h3>
+                                <div class="book-meta">
+                                    <span>📚 ${b.chapter_count} chapters</span>
+                                    <span>🌐 ${b.site_name}</span>
+                                </div>
+                            </div>
+                            <div class="book-actions">
+                                <button class="btn-icon expand" onclick="event.stopPropagation(); toggleChapters(${b.id})">▼</button>
+                                <button class="btn-icon delete" onclick="event.stopPropagation(); deleteBook(${b.id})">🗑</button>
+                                <button class="btn btn-book" style="margin-top:10px;" onclick="openContinueModal(${b.id})">Continue Download</button>
+                            </div>
+                        </div>
+                        <div class="chapter-list" id="chapters-${b.id}"></div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load books:', err);
+            }
+        }
+        
+        // ===== Expand/Collapse Chapters =====
+        async function toggleChapters(bookId) {
+            const list = document.getElementById(`chapters-${bookId}`);
+            if (list.classList.contains('show')) {
+                list.classList.remove('show');
                 return;
             }
-
+            
+            try {
+                const res = await fetch(`/api/books/${bookId}/chapters`);
+                const chapters = await res.json();
+                
+                list.innerHTML = chapters.map((c, i) => `
+                    <div class="chapter-item" onclick="event.stopPropagation(); openChapter(${bookId}, ${i})">
+                        <span class="chapter-num">${c.chapter_order}</span>
+                        <span class="chapter-title">${c.title}</span>
+                    </div>
+                `).join('');
+                
+                list.classList.add('show');
+            } catch (err) {
+                console.error('Failed to load chapters:', err);
+            }
+        }
+        
+        // ===== Save Single Article =====
+        async function saveArticle() {
+            const url = document.getElementById('url-input').value.trim();
+            if (!url) { alert('Please enter a URL'); return; }
+            
+            const btn = document.getElementById('save-btn');
             btn.disabled = true;
-            btn.textContent = 'Fetching...';
-
+            btn.innerHTML = '<span class="loading-spinner"></span>Saving...';
+            
             try {
                 const res = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
-
                 const result = await res.json();
-
+                
                 if (res.ok) {
-                    input.value = '';
+                    document.getElementById('url-input').value = '';
                     loadArticles();
-                    alert('Article saved successfully!');
+                    alert('✅ Article saved!');
                 } else {
-                    alert('Error: ' + (result.error || 'Failed to save'));
+                    alert('❌ Error: ' + (result.error || 'Save failed'));
                 }
             } catch (err) {
-                alert('Network error: ' + err.message);
+                alert('❌ Network error: ' + err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Fetch & Clean';
+                btn.textContent = 'Save Article';
             }
         }
-
-        async function deleteArticle(id) {
-            if (!confirm('Are you sure you want to delete this article?')) return;
-
+        
+        // ===== Download Whole Book =====
+        async function startDownload() {
+            const url = document.getElementById('book-chapter-url').value.trim();
+            if (!url) { alert('Please enter the first chapter URL'); return; }
+            const bookName = document.getElementById('book-name').value.trim();
+            const maxChapters = parseInt(document.getElementById('max-chapters').value) || 100;
+            
+            const progress = document.getElementById('download-progress');
+            progress.classList.add('show');
+            
             try {
-                const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    loadArticles();
-                } else {
-                    alert('Failed to delete article');
-                }
-            } catch (err) {
-                alert('Error: ' + err.message);
-            }
-        }
-
-        async function openReader(articleId) {
-            try {
-                const res = await fetch(`/api/articles/${articleId}`);
-                if (!res.ok) throw new Error('Failed to load article');
-                const article = await res.json();
-
-                const modal = document.getElementById('reader-modal');
-                const container = modal.querySelector('.reader-container');
-                const toolbarTitle = document.getElementById('toolbar-title');
-
-                // Store next chapter URL (use next_url from database)
-                currentNextChapterUrl = article.next_url;
+                const res = await fetch('/api/books/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, bookName, maxChapters })
+                });
+                const { downloadId } = await res.json();
                 
-                // Update toolbar title
-                toolbarTitle.textContent = article.title;
-
-                // Build next chapter button HTML
-                const nextChapterHtml = currentNextChapterUrl ?
-                    `<button class="next-chapter-btn" onclick="loadNextChapter()">
-                        Next Chapter →
-                    </button>` :
-                    `<div class="no-next-chapter">
-                        No next chapter link found
-                    </div>`;
-
-                container.innerHTML = `
-                    <h1>${article.title}</h1>
-                    <div class="article-source">
-                        ${article.site_name} · ${new Date(article.created_at).toLocaleDateString()}
-                    </div>
-                    <div id="reader-content">${article.content}</div>
-                    <div id="next-chapter-container">
-                        ${nextChapterHtml}
-                    </div>
-                `;
-
+                // Poll progress
+                const checkProgress = async () => {
+                    const statusRes = await fetch(`/api/books/download/${downloadId}`);
+                    const status = await statusRes.json();
+                    
+                    const percent = Math.round((status.currentChapter / maxChapters) * 100);
+                    document.getElementById('progress-fill').style.width = percent + '%';
+                    document.getElementById('progress-percent').textContent = percent + '%';
+                    document.getElementById('progress-status').textContent = `Downloading chapter ${status.currentChapter}...`;
+                    
+                    if (status.status === 'completed') {
+                        document.getElementById('progress-status').textContent = `✅ Download complete! Total ${status.totalChapters} chapters`;
+                        document.getElementById('book-chapter-url').value = '';
+                        document.getElementById('book-name').value = '';
+                        loadBooks();
+                        switchTab('books');
+                        document.querySelectorAll('.tab-btn')[1].click();
+                        setTimeout(() => progress.classList.remove('show'), 3000);
+                    } else if (status.status === 'error') {
+                        document.getElementById('progress-status').textContent = `❌ Error: ${status.error}`;
+                        setTimeout(() => progress.classList.remove('show'), 5000);
+                    } else {
+                        setTimeout(checkProgress, 1500);
+                    }
+                };
+                
+                checkProgress();
+            } catch (err) {
+                alert('Download failed: ' + err.message);
+                progress.classList.remove('show');
+            }
+        }
+        
+        // ===== Open Article (Article Mode) =====
+        async function openArticle(id) {
+            try {
+                const res = await fetch(`/api/articles/${id}`);
+                const article = await res.json();
+                
+                currentMode = 'article';
+                currentBookId = null;
+                currentNextUrl = article.next_url;
+                
+                const modal = document.getElementById('reader-modal');
+                modal.className = 'reader-modal article-mode';
+                
+                document.getElementById('toolbar-title').textContent = article.title;
+                document.getElementById('reader-title').textContent = article.title;
+                document.getElementById('reader-meta').textContent = `${article.site_name} · ${new Date(article.created_at).toLocaleDateString()}`;
+                document.getElementById('reader-body').innerHTML = article.content;
+                document.getElementById('toc-btn').style.display = 'none';
+                document.getElementById('chapter-sidebar').classList.remove('show');
+                
+                // Navigation buttons
+                document.getElementById('nav-buttons').innerHTML = currentNextUrl ? 
+                    `<button class="nav-btn next" onclick="loadNextChapter()">Next Chapter →</button>` :
+                    `<div class="no-more">— No more —</div>`;
+                
                 modal.style.display = 'block';
                 modal.scrollTop = 0;
             } catch (err) {
-                console.error(err);
-                alert('Failed to load article');
+                alert('Failed to load');
             }
         }
-
-        async function loadNextChapter() {
-            if (!currentNextChapterUrl) {
-                alert('No next chapter link available');
-                return;
+        
+        // ===== Open Book Chapter (Book Mode) =====
+        async function openChapter(bookId, chapterIndex) {
+            try {
+                const res = await fetch(`/api/books/${bookId}/chapters`);
+                bookChapters = await res.json();
+                currentBookId = bookId;
+                currentChapterIndex = chapterIndex;
+                currentMode = 'book';
+                
+                const modal = document.getElementById('reader-modal');
+                modal.className = 'reader-modal book-mode';
+                
+                // Show TOC button
+                document.getElementById('toc-btn').style.display = 'block';
+                
+                // Build sidebar TOC
+                const sidebar = document.getElementById('chapter-sidebar');
+                sidebar.innerHTML = `
+                    <div class="sidebar-title">📑 TOC (${bookChapters.length} chapters)</div>
+                    ${bookChapters.map((c, i) => `
+                        <div class="sidebar-item ${i === chapterIndex ? 'active' : ''}" onclick="goToChapter(${i})">
+                            ${c.chapter_order}. ${c.title}
+                        </div>
+                    `).join('')}
+                `;
+                
+                await displayChapter(bookChapters[chapterIndex].id);
+            } catch (err) {
+                alert('Failed to load');
             }
-
-            const btn = document.querySelector('.next-chapter-btn');
-            const container = document.getElementById('next-chapter-container');
-
-            btn.classList.add('loading');
+        }
+        
+        // ===== Display Chapter Content =====
+        async function displayChapter(articleId) {
+            const res = await fetch(`/api/articles/${articleId}`);
+            const article = await res.json();
+            
+            document.getElementById('toolbar-title').textContent = article.title;
+            document.getElementById('reader-title').textContent = article.title;
+            document.getElementById('reader-meta').textContent = `Chapter ${currentChapterIndex + 1} / ${bookChapters.length}`;
+            document.getElementById('reader-body').innerHTML = article.content;
+            
+            // Update sidebar highlight
+            document.querySelectorAll('.sidebar-item').forEach((item, i) => {
+                item.classList.toggle('active', i === currentChapterIndex);
+            });
+            
+            // Navigation buttons
+            const hasPrev = currentChapterIndex > 0;
+            const hasNext = currentChapterIndex < bookChapters.length - 1;
+            
+            document.getElementById('nav-buttons').innerHTML = `
+                <button class="nav-btn" onclick="goToChapter(${currentChapterIndex - 1})" ${!hasPrev ? 'disabled' : ''}>← Previous</button>
+                <button class="nav-btn next" onclick="goToChapter(${currentChapterIndex + 1})" ${!hasNext ? 'disabled' : ''}>Next →</button>
+            `;
+            
+            document.getElementById('reader-modal').style.display = 'block';
+            document.getElementById('reader-modal').scrollTop = 0;
+        }
+        
+        // ===== Go to Chapter =====
+        async function goToChapter(index) {
+            if (index < 0 || index >= bookChapters.length) return;
+            currentChapterIndex = index;
+            await displayChapter(bookChapters[index].id);
+        }
+        
+        // ===== Load Next Chapter (Article Mode) =====
+        async function loadNextChapter() {
+            if (!currentNextUrl) return;
+            
+            const btn = document.querySelector('.nav-btn.next');
             btn.disabled = true;
-
+            btn.innerHTML = '<span class="loading-spinner"></span>Loading...';
+            
             try {
                 const res = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: currentNextChapterUrl })
+                    body: JSON.stringify({ url: currentNextUrl })
                 });
-
                 const result = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(result.error || 'Failed to fetch next chapter');
-                }
-
-                const article = result.data;
-
-                // Append new chapter content
-                const readerContent = document.getElementById('reader-content');
-                const newChapterHtml = `
-                    <div class="chapter-divider">
-                        · · ·
-                    </div>
-                    <h2>${article.title}</h2>
-                    ${article.content}
-                `;
-                readerContent.insertAdjacentHTML('beforeend', newChapterHtml);
-
-                // Update next chapter URL (use next_url from database)
-                currentNextChapterUrl = article.next_url;
-
-                // Update button
-                if (currentNextChapterUrl) {
-                    container.innerHTML = `
-                        <button class="next-chapter-btn" onclick="loadNextChapter()">
-                            Next Chapter →
-                        </button>
-                    `;
+                
+                if (res.ok) {
+                    const article = result.data;
+                    currentNextUrl = article.next_url;
+                    
+                    document.getElementById('toolbar-title').textContent = article.title;
+                    document.getElementById('reader-title').textContent = article.title;
+                    document.getElementById('reader-body').innerHTML = article.content;
+                    
+                    document.getElementById('nav-buttons').innerHTML = currentNextUrl ? 
+                        `<button class="nav-btn next" onclick="loadNextChapter()">Next Chapter →</button>` :
+                        `<div class="no-more">— End —</div>`;
+                    
+                    document.getElementById('reader-modal').scrollTop = 0;
+                    loadArticles();
                 } else {
-                    container.innerHTML = `
-                        <div class="no-next-chapter">
-                            You've reached the end
-                        </div>
-                    `;
+                    alert('Failed to load: ' + (result.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.textContent = 'Next Chapter →';
                 }
-
-                // Scroll to new chapter
-                const dividers = document.querySelectorAll('.chapter-divider');
-                if (dividers.length > 0) {
-                    dividers[dividers.length - 1].scrollIntoView({ behavior: 'smooth' });
-                }
-
-                // Refresh article list
-                loadArticles();
-
             } catch (err) {
-                console.error(err);
-                alert('Failed to load next chapter: ' + err.message);
-                btn.classList.remove('loading');
+                alert('Failed to load: ' + err.message);
                 btn.disabled = false;
+                btn.textContent = 'Next Chapter →';
             }
         }
-
+        
+        // ===== Delete =====
+        async function deleteArticle(id) {
+            if (!confirm('Delete this article?')) return;
+            await fetch(`/api/articles/${id}`, { method: 'DELETE' });
+            loadArticles();
+        }
+        
+        async function deleteBook(id) {
+            if (!confirm('Delete this book and all chapters?')) return;
+            await fetch(`/api/books/${id}`, { method: 'DELETE' });
+            loadBooks();
+        }
+        
+        // ===== Utility Functions =====
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
+            document.getElementById('reader-container').style.fontSize = currentFontSize + 'px';
+        }
+        
+        function toggleSidebar() {
+            document.getElementById('chapter-sidebar').classList.toggle('show');
+        }
+        
         function closeReader() {
             document.getElementById('reader-modal').style.display = 'none';
+            document.getElementById('chapter-sidebar').classList.remove('show');
         }
-
-        // Close reader with Escape key
-        document.addEventListener('keydown', (e) => {
+        
+        document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeReader();
+            if (currentMode === 'book' && document.getElementById('reader-modal').style.display === 'block') {
+                if (e.key === 'ArrowLeft') goToChapter(currentChapterIndex - 1);
+                if (e.key === 'ArrowRight') goToChapter(currentChapterIndex + 1);
+            }
         });
+
+        function openContinueModal(bookId) {
+            document.getElementById('continue-modal').style.display = 'block';
+            document.getElementById('continue-book-id').value = bookId;
+            document.getElementById('continue-max').value = 50;
+            document.getElementById('continue-progress').textContent = '';
+            // Show book info and auto-detect next_url
+            fetch(`/api/books/${bookId}/chapters`).then(res => res.json()).then(chapters => {
+                if (chapters.length === 0) {
+                    document.getElementById('continue-book-info').textContent = 'No chapters found.';
+                    document.getElementById('continue-form').style.display = 'none';
+                    return;
+                }
+                const last = chapters[chapters.length - 1];
+                document.getElementById('continue-book-info').innerHTML = `<b>Book:</b> ${last.book_name || ''}<br><b>Last Chapter:</b> ${last.title}`;
+                document.getElementById('continue-form').style.display = 'block';
+                document.getElementById('continue-form').dataset.nextUrl = last.next_url || '';
+                if (!last.next_url) {
+                    document.getElementById('continue-progress').textContent = 'No next chapter link found.';
+                }
+            });
+        }
+        function closeContinueModal() {
+            document.getElementById('continue-modal').style.display = 'none';
+        }
+        async function submitContinueDownload() {
+            const bookId = document.getElementById('continue-book-id').value;
+            const maxChapters = parseInt(document.getElementById('continue-max').value) || 50;
+            const nextUrl = document.getElementById('continue-form').dataset.nextUrl;
+            if (!nextUrl) {
+                document.getElementById('continue-progress').textContent = 'No next chapter link available.';
+                return;
+            }
+            document.getElementById('continue-progress').textContent = 'Starting...';
+            try {
+                const res = await fetch(`/api/books/${bookId}/continue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: nextUrl, maxChapters })
+                });
+                const result = await res.json();
+                if (res.ok && result.downloadId) {
+                    pollContinueProgress(result.downloadId);
+                } else {
+                    document.getElementById('continue-progress').textContent = 'Failed: ' + (result.error || 'Unknown error');
+                }
+            } catch (err) {
+                document.getElementById('continue-progress').textContent = 'Error: ' + err.message;
+            }
+        }
+        async function pollContinueProgress(downloadId) {
+            let finished = false;
+            while (!finished) {
+                await new Promise(r => setTimeout(r, 1200));
+                const res = await fetch(`/api/books/download/${downloadId}`);
+                const status = await res.json();
+                if (status.status === 'completed') {
+                    document.getElementById('continue-progress').textContent = `Done! Downloaded ${status.totalChapters} chapters.`;
+                    finished = true;
+                    setTimeout(closeContinueModal, 1800);
+                } else if (status.status === 'error') {
+                    document.getElementById('continue-progress').textContent = 'Error: ' + status.error;
+                    finished = true;
+                } else {
+                    document.getElementById('continue-progress').textContent = `Downloading... Chapter ${status.currentChapter}`;
+                }
+            }
+            // Optionally refresh books list
+            loadBooks();
+        }
     </script>
 </body>
 </html>
