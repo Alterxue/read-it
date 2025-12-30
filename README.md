@@ -29,6 +29,7 @@ http://localhost:3000
 - ➡️ Auto-detect next chapter links
 - 🛡️ Bypass Cloudflare protection
 - ✈️ Offline reading (PWA support)
+- 📥 **Cache All Chapters to Device**: One-click button to cache all chapters of a book for offline reading. Button is available in the Bookshelf tab for each book. Progress and completion are shown in the UI. Service Worker ensures chapters are available offline.
 
 ## 📁 Project Structure
 
@@ -99,6 +100,7 @@ DB_PASSWORD=your_password
 ## 📱 Offline Reading
 
 - PWA support: Install as app, cache articles/books for offline use
+- **Cache All Chapters**: Use the "Cache All Chapters to Device" button in the Bookshelf tab to make all chapters of a book available offline. Progress is shown during caching. Chapters will be readable offline after caching completes.
 
 ---
 

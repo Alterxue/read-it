@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Read-It - 阅读器</title>
+    <title>Read-It </title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#9b59b6">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -591,6 +593,7 @@
                                 <button class="btn-icon expand" onclick="event.stopPropagation(); toggleChapters(${b.id})">▼</button>
                                 <button class="btn-icon delete" onclick="event.stopPropagation(); deleteBook(${b.id})">🗑</button>
                                 <button class="btn btn-book" style="margin-top:10px;" onclick="openContinueModal(${b.id})">Continue Download</button>
+                                <button class="btn btn-secondary" style="margin-top:10px;" onclick="event.stopPropagation(); cacheAllChapters(${b.id}, this)">Cache All Chapters to Device</button>
                             </div>
                         </div>
                         <div class="chapter-list" id="chapters-${b.id}"></div>
@@ -955,6 +958,18 @@
             // Optionally refresh books list
             loadBooks();
         }
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js').then(() => {
+            console.log('Service Worker registered');
+          });
+        }
+        // Show offline status
+        window.addEventListener('offline', () => {
+          alert('You are offline. Cached articles and chapters are available for reading.');
+        });
     </script>
+    <script src="/cacheAllChapters.js"></script>
 </body>
 </html>

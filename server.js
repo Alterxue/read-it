@@ -117,7 +117,7 @@ app.delete('/api/books/:id', async (req, res) => {
     }
 });
 
-// Download entire book - starts from first chapter URL and follows next links
+// get the status of the downloading mission
 let downloadInProgress = {};
 
 app.post('/api/books/download', async (req, res) => {
@@ -306,6 +306,83 @@ async function fetchChapter(browser, url) {
     };
 }
 
+// Continue downloading chapters for an existing book
+app.post('/api/books/:id/continue', async (req, res) => {
+    const bookId = parseInt(req.params.id);
+    const { url, maxChapters = 100 } = req.body;
+    if (!url) {
+        return res.status(400).json({ error: 'URL is required' });
+    }
+    // Find current max chapter_order for this book
+    let startOrder = 1;
+    try {
+        const result = await pool.query('SELECT MAX(chapter_order) as max_order FROM articles WHERE book_id = $1', [bookId]);
+        if (result.rows.length > 0 && result.rows[0].max_order) {
+            startOrder = result.rows[0].max_order + 1;
+        }
+    } catch (err) {
+        return res.status(500).json({ error: 'Failed to get chapter order' });
+    }
+    // Start background download
+    const downloadId = Date.now().toString();
+    downloadInProgress[downloadId] = {
+        status: 'downloading',
+        currentChapter: startOrder,
+        totalChapters: 0,
+        bookId,
+        error: null
+    };
+    res.json({ downloadId, message: 'Continue download started' });
+    continueDownloadBook(downloadId, url, bookId, startOrder, maxChapters);
+});
+
+// Background function for continuing book download
+async function continueDownloadBook(downloadId, startUrl, bookId, startOrder, maxChapters) {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        let currentUrl = startUrl;
+        let chapterOrder = startOrder;
+        while (currentUrl && chapterOrder < startOrder + maxChapters) {
+            downloadInProgress[downloadId].currentChapter = chapterOrder;
+            console.log(`Continuing download chapter ${chapterOrder}: ${currentUrl}`);
+            try {
+                const { article, nextUrl } = await fetchChapter(browser, currentUrl);
+                await pool.query(
+                    `INSERT INTO articles (title, content, excerpt, site_name, original_url, next_url, book_id, chapter_order)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [article.title, article.content, article.excerpt, article.siteName, currentUrl, nextUrl, bookId, chapterOrder]
+                );
+                console.log(`Chapter ${chapterOrder} saved: ${article.title}`);
+                currentUrl = nextUrl;
+                chapterOrder++;
+                downloadInProgress[downloadId].totalChapters = chapterOrder - startOrder;
+                await new Promise(r => setTimeout(r, 1000));
+            } catch (err) {
+                console.error(`Error fetching chapter ${chapterOrder}:`, err.message);
+                break;
+            }
+        }
+        // Update book chapter count
+        const countResult = await pool.query('SELECT COUNT(*) FROM articles WHERE book_id = $1', [bookId]);
+        const chapterCount = parseInt(countResult.rows[0].count) || 0;
+        await pool.query('UPDATE books SET chapter_count = $1 WHERE id = $2', [chapterCount, bookId]);
+        downloadInProgress[downloadId].status = 'completed';
+        console.log(`Continue book download completed: ${chapterOrder - startOrder} chapters`);
+    } catch (error) {
+        console.error('Continue download error:', error.message);
+        downloadInProgress[downloadId].status = 'error';
+        downloadInProgress[downloadId].error = error.message;
+    } finally {
+        if (browser) await browser.close();
+        setTimeout(() => delete downloadInProgress[downloadId], 300000);
+    }
+}
+
+
 // ============ ARTICLES API ============
 
 // Get all standalone articles (not part of any book)
@@ -388,82 +465,6 @@ app.post('/api/save', async (req, res) => {
         if (browser) await browser.close();
     }
 });
-
-// Continue downloading chapters for an existing book
-app.post('/api/books/:id/continue', async (req, res) => {
-    const bookId = parseInt(req.params.id);
-    const { url, maxChapters = 100 } = req.body;
-    if (!url) {
-        return res.status(400).json({ error: 'URL is required' });
-    }
-    // Find current max chapter_order for this book
-    let startOrder = 1;
-    try {
-        const result = await pool.query('SELECT MAX(chapter_order) as max_order FROM articles WHERE book_id = $1', [bookId]);
-        if (result.rows.length > 0 && result.rows[0].max_order) {
-            startOrder = result.rows[0].max_order + 1;
-        }
-    } catch (err) {
-        return res.status(500).json({ error: 'Failed to get chapter order' });
-    }
-    // Start background download
-    const downloadId = Date.now().toString();
-    downloadInProgress[downloadId] = {
-        status: 'downloading',
-        currentChapter: startOrder,
-        totalChapters: 0,
-        bookId,
-        error: null
-    };
-    res.json({ downloadId, message: 'Continue download started' });
-    continueDownloadBook(downloadId, url, bookId, startOrder, maxChapters);
-});
-
-// Background function for continuing book download
-async function continueDownloadBook(downloadId, startUrl, bookId, startOrder, maxChapters) {
-    let browser;
-    try {
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        let currentUrl = startUrl;
-        let chapterOrder = startOrder;
-        while (currentUrl && chapterOrder < startOrder + maxChapters) {
-            downloadInProgress[downloadId].currentChapter = chapterOrder;
-            console.log(`Continuing download chapter ${chapterOrder}: ${currentUrl}`);
-            try {
-                const { article, nextUrl } = await fetchChapter(browser, currentUrl);
-                await pool.query(
-                    `INSERT INTO articles (title, content, excerpt, site_name, original_url, next_url, book_id, chapter_order)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [article.title, article.content, article.excerpt, article.siteName, currentUrl, nextUrl, bookId, chapterOrder]
-                );
-                console.log(`Chapter ${chapterOrder} saved: ${article.title}`);
-                currentUrl = nextUrl;
-                chapterOrder++;
-                downloadInProgress[downloadId].totalChapters = chapterOrder - startOrder;
-                await new Promise(r => setTimeout(r, 1000));
-            } catch (err) {
-                console.error(`Error fetching chapter ${chapterOrder}:`, err.message);
-                break;
-            }
-        }
-        // Update book chapter count
-        const countResult = await pool.query('SELECT COUNT(*) FROM articles WHERE book_id = $1', [bookId]);
-        const chapterCount = parseInt(countResult.rows[0].count) || 0;
-        await pool.query('UPDATE books SET chapter_count = $1 WHERE id = $2', [chapterCount, bookId]);
-        downloadInProgress[downloadId].status = 'completed';
-        console.log(`Continue book download completed: ${chapterOrder - startOrder} chapters`);
-    } catch (error) {
-        console.error('Continue download error:', error.message);
-        downloadInProgress[downloadId].status = 'error';
-        downloadInProgress[downloadId].error = error.message;
-    } finally {
-        if (browser) await browser.close();
-        setTimeout(() => delete downloadInProgress[downloadId], 300000);
-    }
-}
 
 // Start the server
 app.listen(PORT, () => {
