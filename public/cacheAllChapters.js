@@ -2,7 +2,7 @@
 async function cacheAllChapters(bookId, btn) {
     btn.disabled = true;
     const originalText = btn.textContent;
-    btn.innerHTML = '<span class="loading-spinner"></span>缓存中...';
+    btn.innerHTML = '<span class="loading-spinner"></span>RUNING...';
     try {
         // Fetch all chapters
         const res = await fetch(`/api/books/${bookId}/chapters`);
